@@ -9,6 +9,8 @@ Reference:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pytorch_lightning as ptl
+from utils.score_utils import Statistics, compute_scores
 
 
 class BasicBlock(nn.Module):
@@ -70,7 +72,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ResNet(ptl.LightningModule):
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNet, self).__init__()
         self.in_planes = 64
@@ -102,6 +104,50 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
+    def bcewithlogits_loss(self, logits, labels):
+        return F.binary_cross_entropy_with_logits(logits, labels)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
+        return optimizer
+
+    def lr_schedulers(self):
+        optimizer = self.configure_optimizers()
+        step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
+        return step_lr_scheduler
+
+    def training_step(self, train_batch, batch_idx):
+        self.train_stats = Statistics()
+        x, y = train_batch
+        logits = self.forward(x)
+        loss = self.bcewithlogits_loss(logits, y.float())
+        preds = (logits.detach() >= 0.45)
+        current_loss = loss.item() * x.size(0)
+        scores = compute_scores(preds.cpu(), y.cpu())
+        self.train_stats.update(float(current_loss), *scores)
+        self.log('train acc', self.train_stats.precision())
+        self.log('train loss', self.train_stats.loss())
+        return loss
+
+    def training_epoch_end(self, outputs):
+        self.log('train acc on epoch', self.train_stats.precision())
+        self.log('train loss on epoch', self.train_stats.loss())
+
+    def validation_step(self, val_batch, batch_idx):
+        self.val_stats = Statistics()
+        x, y = val_batch
+        logits = self.forward(x)
+        loss = self.bcewithlogits_loss(logits, y.float())
+        preds = (logits.detach() >= 0.45)
+        current_loss = loss.item() * x.size(0)
+        scores = compute_scores(preds.cpu(), y.cpu())
+        self.val_stats.update(float(current_loss), *scores)
+        return loss
+
+    def validation_epoch_end(self, outputs):
+        self.log('val acc on epoch', self.val_stats.precision())
+        self.log('val loss on epoch', self.val_stats.loss())
 
 
 def ResNet18():
