@@ -54,7 +54,7 @@ def get_dataloaders():
     batch_size = 128
     workers = 2
     num_classes = 80
-    image_size = 228
+    image_size = 224
     data = '/local/scratch1/makbn/sara/data'
     # COCO Data loading
     instances_path_val = os.path.join(data, 'annotations/instances_val2014.json')
