@@ -106,6 +106,7 @@ class ResNet(ptl.LightningModule):
         out = self.layer4(out)
         print(f'layer 4 shape:{list(out.size())}')
         out = F.avg_pool2d(out, 4)
+        out = F.avg_pool2d(out, 7)
         print(f'avg shape:{list(out.size())}')
         out = out.view(out.size(0), -1)
         print(f'view shape:{list(out.size())}')
