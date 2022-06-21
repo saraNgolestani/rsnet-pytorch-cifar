@@ -96,20 +96,13 @@ class ResNet(ptl.LightningModule):
 
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
-        print(f' bn1 shape:{list(out.size())}')
         out = self.layer1(out)
-        print(f'layer 1 shape:{list(out.size())}')
         out = self.layer2(out)
-        print(f'layer 2 shape:{list(out.size())}')
         out = self.layer3(out)
-        print(f'layer 3 shape:{list(out.size())}')
         out = self.layer4(out)
-        print(f'layer 4 shape:{list(out.size())}')
         out = F.avg_pool2d(out, 4)
         out = F.avg_pool2d(out, 7)
-        print(f'avg shape:{list(out.size())}')
         out = out.view(out.size(0), -1)
-        print(f'view shape:{list(out.size())}')
         out = self.linear(out)
         return out
 
@@ -118,12 +111,15 @@ class ResNet(ptl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
-        return optimizer
-
-    def lr_schedulers(self):
-        optimizer = self.configure_optimizers()
-        step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
-        return step_lr_scheduler
+        lr_scheduler = {'scheduler': torch.optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=7000,
+            gamma=0.9
+        ),
+            'name': 'learning_rate',
+            'interval': 'step',
+            'frequency': 1}
+        return [optimizer], [lr_scheduler]
 
     def training_step(self, train_batch, batch_idx):
         self.train_stats = Statistics()

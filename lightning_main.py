@@ -9,6 +9,8 @@ import pytorch_lightning as pl
 import torch
 import wandb
 import warnings
+from pytorch_lightning.callbacks import LearningRateMonitor
+
 warnings.filterwarnings('always')
 
 # torch.backends.cudnn.benchmark = True
@@ -41,6 +43,7 @@ def run():
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     wandb_logger = WandbLogger(project=args.wandb_name, entity="sara_ngln")
     wandb_logger.experiment.config.update({
         "val_zoom_factor": args.val_zoom_factor,
@@ -52,7 +55,7 @@ if __name__ == '__main__':
     run()
     model = ResNet18()
 
-    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=2,
+    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=100, num_nodes=1, gpus=2,
                          accelerator="gpu", devices=2, auto_select_gpus=True)
     train_dl = COCODatasetLightning().train_dataloader()
     val_dl = COCODatasetLightning().val_dataloader()
