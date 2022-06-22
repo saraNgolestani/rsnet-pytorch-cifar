@@ -113,7 +113,7 @@ class ResNet(ptl.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
         lr_scheduler = {'scheduler': torch.optim.lr_scheduler.StepLR(
             optimizer,
-            step_size=7000,
+            step_size=14000,
             gamma=0.9
         ),
             'name': 'learning_rate',
