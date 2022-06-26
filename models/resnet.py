@@ -106,8 +106,8 @@ class ResNet(ptl.LightningModule):
         out = self.linear(out)
         return out
 
-    def bce_loss(self, logits, labels):
-        return F.binary_cross_entropy(logits, labels)
+    def bcewithlogits_loss(self, logits, labels):
+        return F.binary_cross_entropy_with_logits(logits, labels)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
@@ -125,7 +125,7 @@ class ResNet(ptl.LightningModule):
         self.train_stats = Statistics()
         x, y = train_batch
         logits = self.forward(x)
-        loss = self.bce_loss(logits, y.float())
+        loss = self.bcewithlogits_loss(logits, y.float())
         preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
@@ -142,7 +142,7 @@ class ResNet(ptl.LightningModule):
         self.val_stats = Statistics()
         x, y = val_batch
         logits = self.forward(x)
-        loss = self.bce_loss(logits, y.float())
+        loss = self.bcewithlogits_loss(logits, y.float())
         preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
