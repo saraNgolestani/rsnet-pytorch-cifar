@@ -120,7 +120,7 @@ class ResNet(ptl.LightningModule):
         return F.binary_cross_entropy_with_logits(logits, labels)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         lr_scheduler = {'scheduler': torch.optim.lr_scheduler.StepLR(
             optimizer,
             step_size=14000,
@@ -204,8 +204,9 @@ class ResNet(ptl.LightningModule):
         self.val_step_counter = 0
         self.val_stats = Statistics()
 
+
 def ResNet18(args):
-    return ResNet(BasicBlock, [2, 2, 2, 2],lr=args.lr )
+    return ResNet(BasicBlock, [2, 2, 2, 2], lr=args.lr)
 
 
 def ResNet34():
