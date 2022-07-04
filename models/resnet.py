@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as ptl
-from utils.score_utils import Statistics, compute_scores
+from utils.score_utils import Statistics, compute_scores, compute_scores_and_th
 
 
 class BasicBlock(nn.Module):
@@ -73,8 +73,18 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(ptl.LightningModule):
-    def __init__(self, block, num_blocks, num_classes=80):
+    def __init__(self, block, num_blocks, num_classes=80, lr=5e-4):
         super(ResNet, self).__init__()
+        self.best_th = 0.45
+        self.val_step_counter = 0
+        self.all_val_pred = []
+        self.all_val_actual = []
+        self.all_train_pred = []
+        self.all_train_actual = []
+        self.val_stats = Statistics()
+        self.train_stats = Statistics()
+        self.test_stats = Statistics()
+        self.lr = lr
         self.in_planes = 64
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
@@ -122,40 +132,80 @@ class ResNet(ptl.LightningModule):
         return [optimizer], [lr_scheduler]
 
     def training_step(self, train_batch, batch_idx):
-        self.train_stats = Statistics()
         x, y = train_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
-        preds = (logits.detach() >= 0.45)
+        step_preds = logits.detach().cpu()
+        step_actuals = y.cpu()
+        #preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
-        scores = compute_scores(preds.cpu(), y.cpu())
-        self.train_stats.update(float(current_loss), *scores)
-        self.log('train acc', self.train_stats.precision())
+        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
+        self.all_train_pred.extend(step_preds.tolist())
+        self.all_train_actual.extend(step_actuals.tolist())
+        #scores = compute_scores(preds.cpu(), y.cpu())
+        self.train_stats.update(loss=float(current_loss), precision=scores)
+        self.log('train mAP', 100 * self.train_stats.precision())
         self.log('train loss', self.train_stats.loss())
         return loss
 
     def training_epoch_end(self, outputs):
-        self.log('train acc on epoch', self.train_stats.precision())
+        self.log('train mAP on epoch', 100 * self.train_stats.precision())
         self.log('train loss on epoch', self.train_stats.loss())
+        scores, self.best_th = compute_scores_and_th(self.all_train_pred, self.all_train_actual)
+        self.log('train mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+
+        self.all_train_pred = []
+        self.all_train_actual = []
+        self.val_step_counter = 0
+        self.train_stats = Statistics()
 
     def validation_step(self, val_batch, batch_idx):
-        self.val_stats = Statistics()
         x, y = val_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
-        preds = (logits.detach() >= 0.45)
+        #preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
-        scores = compute_scores(preds.cpu(), y.cpu())
-        self.val_stats.update(float(current_loss), *scores)
+        step_preds = logits.detach().cpu()
+        step_actuals = y.cpu()
+        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
+
+        self.all_val_pred.extend(step_preds.tolist())
+        self.all_val_actual.extend(step_actuals.tolist())
+
+        #scores = compute_scores(preds.cpu(), y.cpu())
+        # try:
+        #     for cls_name, cls_pre in zip(self.subclass_flat, scores):
+        #         self.cls_pre_dict[cls_name] = self.cls_pre_dict[cls_name] + cls_pre
+        #     self.val_step_counter += 1
+        # except:
+        #     pass
+        self.val_stats.update(loss=float(current_loss), precision=scores, best_th=self.best_th)
         return loss
 
     def validation_epoch_end(self, outputs):
-        self.log('val acc on epoch', self.val_stats.precision())
+
+        self.log('val mAP on epoch', 100 * self.val_stats.precision())
         self.log('val loss on epoch', self.val_stats.loss())
+        self.log('val best TH on epoch', self.best_th)
+        # try:
+        #     for k, v in self.cls_pre_dict.items():
+        #         self.cls_pre_dict[k] = self.cls_pre_dict[k] / self.val_step_counter
+        #     self.log('val AP per class', self.cls_pre_dict)
+        #     # reset all precisions
+        #     for k, v in self.cls_pre_dict.items():
+        #         self.cls_pre_dict[k] = 0.0
+        # except Exception as e:
+        #     print(e)
 
+        scores, self.best_th = compute_scores_and_th(self.all_val_pred, self.all_val_actual)
+        self.log('val mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+        self.all_val_pred = []
+        self.all_val_actual = []
+        self.val_step_counter = 0
+        self.val_stats = Statistics()
 
-def ResNet18():
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+def ResNet18(args):
+    return ResNet(BasicBlock, [2, 2, 2, 2],lr=args.lr )
 
 
 def ResNet34():
