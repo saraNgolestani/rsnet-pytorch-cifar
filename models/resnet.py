@@ -183,10 +183,12 @@ class ResNet(ptl.LightningModule):
         return loss
 
     def validation_epoch_end(self, outputs):
+        print(f'validation epoch end on device:{self.device}')
 
         self.log('val mAP on epoch', 100 * self.val_stats.precision())
         self.log('val loss on epoch', self.val_stats.loss())
         self.log('val best TH on epoch', self.best_th)
+
         # try:
         #     for k, v in self.cls_pre_dict.items():
         #         self.cls_pre_dict[k] = self.cls_pre_dict[k] / self.val_step_counter
@@ -197,8 +199,10 @@ class ResNet(ptl.LightningModule):
         # except Exception as e:
         #     print(e)
 
-        scores, self.best_th = compute_scores_and_th(self.all_val_pred, self.all_val_actual)
-        self.log('val mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+        if self.all_val_pred and self.all_val_actual:
+            scores, self.best_th = compute_scores_and_th(self.all_val_pred, self.all_val_actual)
+            if scores is not None:
+                self.log('val mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
         self.all_val_pred = []
         self.all_val_actual = []
         self.val_step_counter = 0
