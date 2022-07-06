@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
 import torch
-import wandb
+import os
 import warnings
 import numpy as np
 import random
@@ -19,7 +19,8 @@ warnings.filterwarnings('always')
 # torch.backends.cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
 parser.add_argument('--val_dir')
-parser.add_argument('--model_path')
+parser.add_argument('--checkpoint_name')
+parser.add_argument('--save_path', default='saved_models')
 parser.add_argument('--model_name', type=str, default='tresnet_l')
 parser.add_argument('--num_classes', type=int, default=80)
 parser.add_argument('--input_size', type=int, default=224)
@@ -34,11 +35,14 @@ parser.add_argument('--num_nodes', type=int, default=1)
 parser.add_argument('--dataset_sampling_ratio', default=0.3, type=float, help="sampling ratio of dataset")
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 parser.add_argument('--wandb_name', default='resnet_mgpu')
+parser.add_argument('--load_from_chkp', default=False, type=bool, help="load from check point")
 
+
+args = parser.parse_args()
 checkpoint_callback = ModelCheckpoint(
-    monitor='train mAP on epoch with best TH',
-    dirpath='saved_models',
-    filename='model-{epoch:03d}-{train mAP on epoch with best TH:.2f}',
+    monitor='val mAP on epoch with best TH',
+    dirpath=args.save_path,
+    filename='model-{epoch:03d}-{val mAP on epoch with best TH:.2f}',
     save_top_k=2,
     mode='max'
 )
@@ -74,7 +78,10 @@ if __name__ == '__main__':
                          accelerator="gpu", devices=args.num_gpu)
     train_dl = COCODatasetLightning(args).train_dataloader()
     val_dl = COCODatasetLightning(args).val_dataloader()
-    trainer.fit(model, train_dl, val_dl)
+    if args.load_from_chkp:
+        trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
+    else:
+        trainer.fit(model, train_dl, val_dl)
 
 
 
