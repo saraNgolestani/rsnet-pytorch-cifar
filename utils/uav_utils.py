@@ -244,6 +244,7 @@ class UAVDatasetLightning(LightningDataModule):
             pin_memory=True, drop_last=True)
 
         print(f'size of dataset: {len(self.val_dataset)}')
+        print(f'size of dataloader: {len(val_dl)}')
 
         return val_dl
 
