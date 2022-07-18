@@ -84,7 +84,7 @@ if __name__ == '__main__':
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
     elif args.train:
         trainer.fit(model, train_dl, val_dl)
-    test_model = ResNet18(args).load_from_checkpoint(checkpoint_path=os.path.join(args.save_path, args.checkpoint_name))
+    test_model = model.load_from_checkpoint(map_location=os.path.join(args.save_path, args.checkpoint_name))
     test_uav_dl = UAVDatasetLightning.val_dataloader()
     trainer.test(test_model, test_uav_dl)
 
