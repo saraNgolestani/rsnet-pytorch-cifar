@@ -11,6 +11,8 @@ import itertools
 from PIL import Image
 import pickle
 import random
+from torch.utils.data import Dataset, DataLoader
+
 
 
 def _isArrayLike(obj):
@@ -207,7 +209,7 @@ class UAVArialDetection(datasets.coco.CocoDetection):
 
 class UAVDatasetLightning(LightningDataModule):
     def __init__(self):
-        #super().__init__()
+        super().__init__()
         self.workers = 2
         self.num_classes = 80
         self.image_size = 224
