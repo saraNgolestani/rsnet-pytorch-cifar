@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     if not args.train:
         test_uav_dl = UAVDatasetLightning().val_dataloader()
-        print(f'len of test dataloader{len(test_uav_dl)}')
+        print(f'first of test dataloader: {(test_uav_dl[0])}')
         trainer.test(model=model, dataloaders=test_uav_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
 
 
