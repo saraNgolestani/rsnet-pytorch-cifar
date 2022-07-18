@@ -166,12 +166,14 @@ class UAVArialDetection(datasets.coco.CocoDetection):
         self.root = root
         self.uav = UAV(annFile)
         self.ids = list(self.uav.imgToAnns.keys())
+        print(f'ids len:{len(self.ids)}')
         self.transform = transform
         self.target_transform = target_transform
         with open('/home/sara.naserigolestani/hydra-tresnet/saved_cat2cat.pkl', 'rb') as f:
             loaded_cat2cat = pickle.load(f)
         self.cat2cat = loaded_cat2cat
-        print(self.cat2cat)
+    def __len__(self):
+        return len(self.ids)
 
     def __getitem__(self, index):
         uav = self.uav
@@ -240,6 +242,9 @@ class UAVDatasetLightning(LightningDataModule):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
             pin_memory=True, drop_last=True)
+
+        print(f'size of dataset: {len(self.val_dataset)}')
+
         return val_dl
 
     def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
