@@ -2,6 +2,7 @@
 from models.resnet import ResNet18
 import argparse
 from utils.dataset_utils import COCODatasetLightning
+from utils.uav_utils import UAVDatasetLightning
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from pytorch_lightning.loggers import WandbLogger
@@ -36,6 +37,7 @@ parser.add_argument('--dataset_sampling_ratio', default=0.3, type=float, help="s
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 parser.add_argument('--wandb_name', default='resnet_mgpu')
 parser.add_argument('--load_from_chkp', default=False, type=bool, help="load from check point")
+parser.add_argument('--train', default=False, type=bool, help="load from check point")
 
 
 args = parser.parse_args()
@@ -78,10 +80,16 @@ if __name__ == '__main__':
                          accelerator="gpu", devices=args.num_gpu)
     train_dl = COCODatasetLightning(args).train_dataloader()
     val_dl = COCODatasetLightning(args).val_dataloader()
-    if args.load_from_chkp:
+    if args.load_from_chkp and args.train:
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
-    else:
+    elif args.train:
         trainer.fit(model, train_dl, val_dl)
+    test_model = ResNet18(args).load_from_checkpoint(checkpoint_path="example.ckpt")
+    test_uav_dl = UAVDatasetLightning.val_dataloader()
+    trainer.test(test_model, test_uav_dl)
+
+
+
 
 
 

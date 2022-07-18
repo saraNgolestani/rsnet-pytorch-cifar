@@ -77,6 +77,8 @@ class ResNet(ptl.LightningModule):
         super(ResNet, self).__init__()
         self.best_th = 0.45
         self.val_step_counter = 0
+        self.all_test_pred = []
+        self.all_test_actual = []
         self.all_val_pred = []
         self.all_val_actual = []
         self.all_train_pred = []
@@ -189,6 +191,30 @@ class ResNet(ptl.LightningModule):
         self.all_val_actual = []
         self.val_step_counter = 0
         self.val_stats = Statistics()
+
+    def test_step(self, test_batch, test_idx):
+        x, y = test_batch
+        logits = self.forward(x)
+        loss = self.bcewithlogits_loss(logits, y.float())
+        current_loss = loss.item() * x.size(0)
+        step_preds = logits.detach().cpu()
+        step_actuals = y.cpu()
+        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
+        self.all_test_pred.extend(step_preds.tolist())
+        self.all_test_actual.extend(step_actuals.tolist())
+
+    def test_epoch_end(self, outputs):
+        if self.all_test_pred and self.all_test_actual:
+            scores, best_th = compute_scores_and_th(self.all_test_pred, self.all_test_actual)
+            if scores is not None:
+                self.log('test mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+                self.log('test best TH', best_th)
+
+
+
+
+
+
 
 
 def ResNet18(args):
