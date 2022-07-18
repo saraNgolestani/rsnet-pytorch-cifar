@@ -248,6 +248,16 @@ class UAVDatasetLightning(LightningDataModule):
 
         return val_dl
 
+    def test_dataloader(self):
+        val_dl = torch.utils.data.DataLoader(
+            self.val_dataset, batch_size=self.batch_size,
+            pin_memory=True, drop_last=True)
+
+        print(f'size of dataset: {len(self.val_dataset)}')
+        print(f'size of dataloader: {len(val_dl)}')
+
+        return val_dl
+
     def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
         if sampling_ratio == 1.0:
             print(f'loading the whole dataset from: {data_path}')
