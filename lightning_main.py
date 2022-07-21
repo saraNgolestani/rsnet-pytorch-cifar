@@ -44,7 +44,7 @@ args = parser.parse_args()
 checkpoint_callback = ModelCheckpoint(
     monitor='val mAP on epoch with best TH',
     dirpath=args.save_path,
-    filename='model-{epoch:03d}-{val mAP on epoch with best TH:.2f}',
+    filename='model-{epoch:03d}-{val mAP on UAV with best TH:.2f}',
     save_top_k=2,
     mode='max'
 )
@@ -78,8 +78,10 @@ if __name__ == '__main__':
     trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=args.max_epochs,
                          num_nodes=args.num_nodes, gpus=args.num_gpu,
                          accelerator="gpu", devices=args.num_gpu)
-    train_dl = COCODatasetLightning(args).train_dataloader()
-    val_dl = COCODatasetLightning(args).val_dataloader()
+    # train_dl = COCODatasetLightning(args).train_dataloader()
+    # val_dl = COCODatasetLightning(args).val_dataloader()
+    train_dl = UAVDatasetLightning().train_dataloader()
+    val_dl = UAVDatasetLightning().val_dataloader()
     if args.load_from_chkp and args.train:
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
     elif args.train:
