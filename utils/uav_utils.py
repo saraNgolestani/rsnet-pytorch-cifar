@@ -162,13 +162,14 @@ class UAV:
 
 
 class UAVArialDetection(datasets.coco.CocoDetection):
-    def __init__(self, root, annFile, transform=None, target_transform=None):
+    def __init__(self,args,  root, annFile, transform=None, target_transform=None):
         self.root = root
         self.uav = UAV(annFile)
         self.ids = list(self.uav.imgToAnns.keys())
         print(f'ids len:{len(self.ids)}')
         self.transform = transform
         self.target_transform = target_transform
+        self.num_classes = args.num_classes
         with open('/home/sara.naserigolestani/hydra-tresnet/saved_cat2cat.pkl', 'rb') as f:
             loaded_cat2cat = pickle.load(f)
         self.cat2cat = loaded_cat2cat
@@ -181,7 +182,7 @@ class UAVArialDetection(datasets.coco.CocoDetection):
         ann_ids = uav.getAnnIds(imgIds=img_id)
         target = uav.loadAnns(ann_ids)
 
-        output = torch.zeros((80), dtype=torch.long)
+        output = torch.zeros((self.num_classes), dtype=torch.long)
         for obj in target:
             if obj['category_id'] == 1:
                 obj['category_id'] = 3
@@ -211,15 +212,25 @@ class UAVArialDetection(datasets.coco.CocoDetection):
         return img, target
 
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
+g = torch.Generator()
+g.manual_seed(0)
+
+
 class UAVDatasetLightning(LightningDataModule):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
-        self.workers = 2
-        self.num_classes = 80
+        self.workers = 1
+        self.num_classes = args.num_classes
         self.image_size = 224
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/uav/aerial_yolo'
-        self.batch_size = 10
-
+        self.batch_size = args.batch_size
+        self.args = args
         instances_path_val = os.path.join(self.data_path, 'valid/fixed_annotations2.json')
         instances_path_train = os.path.join(self.data_path, 'train/fixed_annotations2.json')
         data_path_val = f'{self.data_path}/valid'  # args.data
@@ -235,13 +246,13 @@ class UAVDatasetLightning(LightningDataModule):
     def train_dataloader(self):
         train_dl = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
-            pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True, num_workers= self.workers, worker_init_fn=seed_worker, generator=g)
         return train_dl
 
     def val_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True,num_workers= self.workers, worker_init_fn=seed_worker, generator=g)
 
         print(f'size of dataset: {len(self.val_dataset)}')
         print(f'size of dataloader: {len(val_dl)}')
@@ -251,7 +262,7 @@ class UAVDatasetLightning(LightningDataModule):
     def test_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True ,num_workers= self.workers, worker_init_fn=seed_worker, generator=g)
 
         print(f'size of dataset: {len(self.val_dataset)}')
         print(f'size of dataloader: {len(val_dl)}')
@@ -261,7 +272,7 @@ class UAVDatasetLightning(LightningDataModule):
     def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
         if sampling_ratio == 1.0:
             print(f'loading the whole dataset from: {data_path}')
-            return UAVArialDetection(data_path,
+            return UAVArialDetection(self.args, data_path,
                                      instances_path,
                                      transforms.Compose([
                                          transforms.Resize((self.image_size, self.image_size)),
@@ -270,7 +281,7 @@ class UAVDatasetLightning(LightningDataModule):
                                      ]))
         else:
             print(f'loading a subset(%{sampling_ratio * 100}) of dataset from: {data_path}')
-            whole_set = UAVArialDetection(data_path,
+            whole_set = UAVArialDetection(self.args, data_path,
                                           instances_path,
                                           transforms.Compose([
                                               transforms.Resize((self.image_size, self.image_size)),
