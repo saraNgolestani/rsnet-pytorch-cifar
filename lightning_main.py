@@ -37,6 +37,8 @@ parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 parser.add_argument('--wandb_name', default='resnet_uav_mgpu')
 parser.add_argument('--load_from_chkp', default=False, type=bool, help="load from check point")
 parser.add_argument('--train', default=False, type=bool, help="load from check point")
+parser.add_argument('--num_devices', type=int, default=2)
+
 
 
 args = parser.parse_args()
