@@ -80,16 +80,15 @@ if __name__ == '__main__':
     trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=args.num_epochs,
                          num_nodes=args.num_nodes, gpus=args.num_gpu, accelerator="gpu", devices=args.num_devices, precision=32,
                          strategy='ddp')
-    # train_dl = COCODatasetLightning(args).train_dataloader()
-    # val_dl = COCODatasetLightning(args).val_dataloader()
-    # test_dl = COCODatasetLightning(args).test_dataloader()
+    train_dl = COCODatasetLightning(args).train_dataloader()
+    val_dl = COCODatasetLightning(args).val_dataloader()
     if args.load_from_chkp and args.train:
-        train_dl = UAVDatasetLightning(args).train_dataloader()
-        val_dl = UAVDatasetLightning(args).val_dataloader()
+        # train_dl = UAVDatasetLightning(args).train_dataloader()
+        # val_dl = UAVDatasetLightning(args).val_dataloader()
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
     elif args.train:
-        train_dl = UAVDatasetLightning(args).train_dataloader()
-        val_dl = UAVDatasetLightning(args).val_dataloader()
+        # train_dl = UAVDatasetLightning(args).train_dataloader()x
+        # val_dl = UAVDatasetLightning(args).val_dataloader()
         trainer.fit(model, train_dl, val_dl)
 
     if not args.train:
