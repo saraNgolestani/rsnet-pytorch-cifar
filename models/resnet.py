@@ -73,7 +73,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(ptl.LightningModule):
-    def __init__(self, block, num_blocks, num_classes=80, lr=5e-4):
+    def __init__(self, block, num_blocks, num_classes=90, lr=5e-4):
         super(ResNet, self).__init__()
         self.best_th = 0.45
         self.val_step_counter = 0
