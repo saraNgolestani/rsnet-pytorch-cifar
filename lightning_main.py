@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference
 parser.add_argument('--val_dir')
 parser.add_argument('--checkpoint_name')
 parser.add_argument('--save_path', default='saved_models')
-parser.add_argument('--num_classes', type=int, default=80)
+parser.add_argument('--num_classes', type=int, default=90)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
 parser.add_argument('--batch_size', type=int, default=5)
@@ -45,7 +45,7 @@ args = parser.parse_args()
 checkpoint_callback = ModelCheckpoint(
     monitor='val mAP on epoch with best TH',
     dirpath=args.save_path,
-    filename='model-{epoch:03d}-{val mAP on UAV with best TH:.2f}',
+    filename='model-{epoch:03d}-{val mAP on coco2017 with best TH:.2f}',
     save_top_k=2,
     mode='max'
 )

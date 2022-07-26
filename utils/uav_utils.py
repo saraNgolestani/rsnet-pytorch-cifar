@@ -162,7 +162,7 @@ class UAV:
 
 
 class UAVArialDetection(datasets.coco.CocoDetection):
-    def __init__(self,args,  root, annFile, transform=None, target_transform=None):
+    def __init__(self, args,  root, annFile, transform=None, target_transform=None):
         self.root = root
         self.uav = UAV(annFile)
         self.ids = list(self.uav.imgToAnns.keys())
